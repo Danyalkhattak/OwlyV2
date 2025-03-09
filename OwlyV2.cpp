@@ -131,6 +131,6 @@ int main(int argc, char* argv[]) {
     std::string username = argv[3];
     std::string wordlist = argv[4];
     
-    start_attack(target, username, wordlist, mode);
+    attack_function(target, username, wordlist, mode);
     return 0;
 }
