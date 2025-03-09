@@ -32,7 +32,7 @@ These dependencies include libraries for SSH, FTP, and packet capture, as well a
 Once the dependencies are installed, compile the source code with `g++`:
 
 ```bash
-g++ -o owlyv2 bruteforce.cpp -lssh -lcurl -lssl -lpcap -pthread
+g++ -o owlyv2 OwlyV2.cpp -lssh -lcurl -lssl -lpcap -pthread
 ```
 
 This will generate the executable file `owlyv2`.
