@@ -119,6 +119,24 @@ void attack_function(const std::string& target, const std::string& username, con
     }
 }
 
+// Fixing the missing function (was causing compiler error)
+void start_attack(const std::string& target, const std::string& username, const std::string& wordlist_path, const std::string& mode) {
+    std::ifstream file(wordlist_path);
+    if (!file) {
+        std::cerr << "Error: Cannot open wordlist file." << std::endl;
+        return;
+    }
+
+    std::vector<std::string> passwords;
+    std::string line;
+    while (std::getline(file, line)) {
+        passwords.push_back(line);
+    }
+    file.close();
+
+    attack_function(target, username, passwords, mode);
+}
+
 int main(int argc, char* argv[]) {
     if (argc != 5) {
         std::cerr << "Usage: " << argv[0] << " <mode> <target> <username> <wordlist>" << std::endl;
@@ -130,7 +148,8 @@ int main(int argc, char* argv[]) {
     std::string target = argv[2];
     std::string username = argv[3];
     std::string wordlist = argv[4];
+
+    start_attack(target, username, wordlist, mode);
     
-    attack_function(target, username, wordlist, mode);
     return 0;
 }
